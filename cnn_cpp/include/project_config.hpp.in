@@ -1,0 +1,3 @@
+#pragma once
+
+#define CNN_CPP_PROJECT_ROOT "@CMAKE_CURRENT_SOURCE_DIR@"

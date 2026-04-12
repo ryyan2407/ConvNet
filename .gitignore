@@ -1,0 +1,35 @@
+.cnet/
+.codex
+
+# Build output
+build/
+cnn_cpp/build/
+cmake-build-*/
+
+# CMake / compiler artifacts
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+Makefile
+cmake_install.cmake
+compile_commands.json
+
+# Binaries and libraries
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# Editor / OS noise
+.DS_Store
+.vscode/
+.idea/
+
+# Local datasets and generated checkpoints
+images/
+cnn_cpp/mnist_trained_weights/
