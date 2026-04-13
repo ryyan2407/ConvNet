@@ -18,7 +18,11 @@ public:
     void set_bias(const std::vector<float>& bias);
     const std::vector<float>& weights() const;
     const std::vector<float>& bias() const;
+    const std::vector<float>& grad_weights() const;
+    const std::vector<float>& grad_bias() const;
 
+    int in_features() const;
+    int out_features() const;
     int expected_weight_count() const;
     int expected_bias_count() const;
 

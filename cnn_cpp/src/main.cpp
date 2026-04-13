@@ -1,59 +1,41 @@
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <memory>
 
-#include "conv2d.hpp"
-#include "flatten.hpp"
 #include "image_loader.hpp"
-#include "linear.hpp"
-#include "maxpool2d.hpp"
-#include "relu.hpp"
-#include "sequential.hpp"
-#include "softmax.hpp"
-#include "weights_loader.hpp"
+#include "model_config.hpp"
+#include "model_io.hpp"
 #include "project_config.hpp"
 
-int main() {
+int main(int argc, char** argv) {
     try {
         const std::filesystem::path project_root = CNN_CPP_PROJECT_ROOT;
         const std::filesystem::path input_path = project_root / "data" / "sample_input.txt";
-        const std::filesystem::path weights_root = project_root / "weights";
+        const std::filesystem::path model_path =
+            argc >= 2 ? std::filesystem::path(argv[1]) : project_root / "weights" / "sample_infer_model.txt";
 
         Tensor input = load_image_as_tensor(input_path.string(), 1, 8, 8, true);
-
-        auto conv1 = std::make_unique<Conv2D>(1, 2, 3, 1, 1);
-        conv1->set_weights(load_weights_from_file((weights_root / "conv1_weights.txt").string(),
-                                                  static_cast<std::size_t>(conv1->expected_weight_count())));
-        conv1->set_bias(load_weights_from_file((weights_root / "conv1_bias.txt").string(),
-                                               static_cast<std::size_t>(conv1->expected_bias_count())));
-
-        auto conv2 = std::make_unique<Conv2D>(2, 3, 3, 1, 1);
-        conv2->set_weights(load_weights_from_file((weights_root / "conv2_weights.txt").string(),
-                                                  static_cast<std::size_t>(conv2->expected_weight_count())));
-        conv2->set_bias(load_weights_from_file((weights_root / "conv2_bias.txt").string(),
-                                               static_cast<std::size_t>(conv2->expected_bias_count())));
-
-        auto linear = std::make_unique<Linear>(12, 3);
-        linear->set_weights(load_weights_from_file((weights_root / "fc_weights.txt").string(),
-                                                   static_cast<std::size_t>(linear->expected_weight_count())));
-        linear->set_bias(load_weights_from_file((weights_root / "fc_bias.txt").string(),
-                                                static_cast<std::size_t>(linear->expected_bias_count())));
-
+        std::ifstream manifest(model_path);
+        if (!manifest) {
+            throw std::runtime_error("Failed to open model path: " + model_path.string());
+        }
+        std::string header;
+        std::getline(manifest, header);
         Sequential model;
-        model.add(std::move(conv1));
-        model.add(std::make_unique<ReLU>());
-        model.add(std::make_unique<MaxPool2D>(2, 2));
-        model.add(std::move(conv2));
-        model.add(std::make_unique<ReLU>());
-        model.add(std::make_unique<MaxPool2D>(2, 2));
-        model.add(std::make_unique<Flatten>());
-        model.add(std::move(linear));
-        model.add(std::make_unique<Softmax>());
+        if (header == "cnn_cpp_model_v1") {
+            model = load_model_artifact(model_path.string());
+        } else if (header == "cnn_cpp_config_v1") {
+            model = build_model_from_config(model_path.string());
+        } else {
+            throw std::runtime_error("Unknown model file header: " + header);
+        }
 
         Tensor output = model.forward(input);
 
         std::cout << "Input shape: ";
         input.print_shape();
+        std::cout << "Model file: " << model_path << "\n";
         std::cout << "Output shape: ";
         output.print_shape();
 

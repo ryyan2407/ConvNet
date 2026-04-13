@@ -9,6 +9,7 @@
 #include "image_loader.hpp"
 #include "linear.hpp"
 #include "maxpool2d.hpp"
+#include "model_io.hpp"
 #include "project_config.hpp"
 #include "relu.hpp"
 #include "sgd.hpp"
@@ -37,9 +38,7 @@ int main() {
         const LabeledDataset dataset = load_labeled_dataset(images_path.string(), labels_path.string(), 1, 4, 4, true);
 
         auto conv = std::make_unique<Conv2D>(1, 2, 3, 1, 1);
-        auto* conv_ptr = conv.get();
         auto linear = std::make_unique<Linear>(8, 2);
-        auto* linear_ptr = linear.get();
 
         Sequential model;
         model.add(std::move(conv));
@@ -77,33 +76,8 @@ int main() {
             }
         }
 
-        save_weights_to_file((trained_root / "conv_weights.txt").string(), conv_ptr->weights());
-        save_weights_to_file((trained_root / "conv_bias.txt").string(), conv_ptr->bias());
-        save_weights_to_file((trained_root / "linear_weights.txt").string(), linear_ptr->weights());
-        save_weights_to_file((trained_root / "linear_bias.txt").string(), linear_ptr->bias());
-
-        auto reloaded_conv = std::make_unique<Conv2D>(1, 2, 3, 1, 1);
-        reloaded_conv->set_weights(
-            load_weights_from_file((trained_root / "conv_weights.txt").string(),
-                                   static_cast<std::size_t>(reloaded_conv->expected_weight_count())));
-        reloaded_conv->set_bias(
-            load_weights_from_file((trained_root / "conv_bias.txt").string(),
-                                   static_cast<std::size_t>(reloaded_conv->expected_bias_count())));
-
-        auto reloaded_linear = std::make_unique<Linear>(8, 2);
-        reloaded_linear->set_weights(
-            load_weights_from_file((trained_root / "linear_weights.txt").string(),
-                                   static_cast<std::size_t>(reloaded_linear->expected_weight_count())));
-        reloaded_linear->set_bias(
-            load_weights_from_file((trained_root / "linear_bias.txt").string(),
-                                   static_cast<std::size_t>(reloaded_linear->expected_bias_count())));
-
-        Sequential reloaded_model;
-        reloaded_model.add(std::move(reloaded_conv));
-        reloaded_model.add(std::make_unique<ReLU>());
-        reloaded_model.add(std::make_unique<MaxPool2D>(2, 2));
-        reloaded_model.add(std::make_unique<Flatten>());
-        reloaded_model.add(std::move(reloaded_linear));
+        save_model_artifact(model, trained_root.string());
+        Sequential reloaded_model = load_model_artifact((trained_root / "model.txt").string());
 
         Softmax softmax;
         std::cout << "Saved trained weights to: " << trained_root << "\n";

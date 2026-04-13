@@ -27,6 +27,10 @@ set(CNN_SOURCES
     src/softmax.cpp
     src/sequential.cpp
     src/weights_loader.cpp
+    src/model_config.cpp
+    src/model_io.cpp
+    src/checkpoint_io.cpp
+    src/eval_utils.cpp
     src/image_loader.cpp
     src/cross_entropy.cpp
     src/sgd.cpp
@@ -60,6 +64,9 @@ target_link_libraries(cnn_train_demo PRIVATE cnn_core)
 add_executable(cnn_mnist_train src/mnist_train.cpp)
 target_link_libraries(cnn_mnist_train PRIVATE cnn_core)
 
+add_executable(cnn_eval src/eval.cpp)
+target_link_libraries(cnn_eval PRIVATE cnn_core)
+
 add_executable(cnn_benchmark src/benchmark_mnist.cpp)
 target_link_libraries(cnn_benchmark PRIVATE cnn_core)
 
@@ -81,3 +88,7 @@ add_cnn_test(test_softmax)
 add_cnn_test(test_sequential)
 add_cnn_test(test_io)
 add_cnn_test(test_stage2)
+add_cnn_test(test_gradient_check)
+add_cnn_test(test_model_io)
+add_cnn_test(test_model_config)
+add_cnn_test(test_checkpoint_io)

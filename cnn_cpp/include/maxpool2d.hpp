@@ -12,6 +12,9 @@ public:
     Tensor infer(const Tensor& input) override;
     Tensor backward(const Tensor& grad_output) override;
 
+    int kernel_size() const;
+    int stride() const;
+
 private:
     int kernel_size_;
     int stride_;

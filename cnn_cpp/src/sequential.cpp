@@ -53,3 +53,5 @@ void Sequential::update(float learning_rate) {
         layer->update(learning_rate);
     }
 }
+
+const std::vector<std::unique_ptr<Layer>>& Sequential::layers() const { return layers_; }

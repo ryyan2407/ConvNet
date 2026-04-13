@@ -33,6 +33,10 @@ The project itself lives in [cnn_cpp](cnn_cpp/).
   - backward propagation
   - `CrossEntropyLoss`
   - `SGD`
+- model config loading
+- model artifact save/load
+- checkpoint resume
+- dedicated evaluation executable
 - Plain-text weight save/load
 - Plain-text sample datasets
 - Native MNIST IDX parsing
@@ -55,9 +59,26 @@ Useful executables:
 ./cnn_infer
 ./cnn_first_milestone
 ./cnn_train_demo
-./cnn_mnist_train <train-images.idx3-ubyte> <train-labels.idx1-ubyte> [max_samples] [epochs] [batch_size] [test-images.idx3-ubyte] [test-labels.idx1-ubyte] [checkpoint_dir]
+./cnn_mnist_train <train-images.idx3-ubyte> <train-labels.idx1-ubyte> [max_samples] [epochs] [batch_size] [test-images.idx3-ubyte] [test-labels.idx1-ubyte] [checkpoint_dir] [model_config] [resume_artifact_dir]
+./cnn_eval <model_artifact_manifest> <images.idx3-ubyte> <labels.idx1-ubyte> [max_samples] [batch_size]
 ./cnn_benchmark <train-images.idx3-ubyte> <train-labels.idx1-ubyte> [samples] [batch_size] [iterations] [repeats] [warmup_repeats] [threads]
 ```
+
+## Current Status
+
+The project now supports the full visible lifecycle:
+
+- build a model from architecture config
+- train on IDX data
+- save full model artifacts
+- evaluate saved artifacts
+- resume training from a saved checkpoint
+
+Real MNIST result from the current codebase:
+
+- `10,000` training samples
+- `10` epochs
+- final test accuracy: `0.9464`
 
 ## Documentation
 

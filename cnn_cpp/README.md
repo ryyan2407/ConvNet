@@ -4,6 +4,13 @@ From-scratch convolutional neural network engine in modern C++.
 
 This project started as a Stage 1 inference engine and then grew into a small Stage 2 training stack. It does not use PyTorch, TensorFlow, OpenCV, Eigen, Armadillo, or other ML/math libraries for the core engine. The CNN layers, tensor storage, forward pass, backward pass, dataset loading, and training loop are implemented in this repo.
 
+The project now also supports:
+
+- architecture config files
+- saved model artifacts
+- checkpoint resume
+- standalone evaluation
+
 ## What This Project Includes
 
 - 4D tensor container with layout `[N, C, H, W]`
@@ -17,6 +24,10 @@ This project started as a Stage 1 inference engine and then grew into a small St
 - `Sequential` model container
 - `CrossEntropyLoss`
 - `SGD` optimizer
+- architecture config loading
+- model artifact save/load
+- checkpoint metadata
+- standalone evaluation executable
 - Plain-text weight loading and saving
 - Plain-text image / dataset loading
 - Native MNIST IDX parsing
@@ -46,6 +57,16 @@ Stage 2 adds training support:
 - cross-entropy loss over logits
 - dataset ingestion for training data
 - checkpoint save/load
+- evaluation on saved artifacts
+- resume training from saved checkpoints
+
+## Real Result
+
+This repo is beyond the "wiring only" stage. A real MNIST run with the current code reached:
+
+- `10,000` training samples
+- `10` epochs
+- final test accuracy: `0.9464`
 
 ## Project Layout
 
@@ -70,6 +91,8 @@ Important entry points:
   Small synthetic training demo with save/load roundtrip.
 - [src/mnist_train.cpp](/home/ryyan/convnet/cnn_cpp/src/mnist_train.cpp:1)
   Real IDX-based training executable.
+- [src/eval.cpp](/home/ryyan/convnet/cnn_cpp/src/eval.cpp:1)
+  Dedicated evaluation executable for saved model artifacts.
 - [src/benchmark_mnist.cpp](/home/ryyan/convnet/cnn_cpp/src/benchmark_mnist.cpp:1)
   Forward / training-step benchmark with repeated runs.
 
@@ -165,10 +188,17 @@ Current example architecture:
 - `Linear`
 - `Softmax`
 
+`cnn_infer` can load either:
+
+- a saved model artifact manifest, or
+- an architecture config file
+
 Run:
 
 ```bash
 ./cnn_infer
+./cnn_infer /home/ryyan/convnet/cnn_cpp/weights/sample_infer_model.txt
+./cnn_infer /home/ryyan/convnet/cnn_cpp/configs/sample_infer_arch.txt
 ```
 
 ### `cnn_first_milestone`
@@ -207,7 +237,7 @@ Training executable for real IDX datasets.
 Usage:
 
 ```bash
-./cnn_mnist_train <train-images.idx3-ubyte> <train-labels.idx1-ubyte> [max_samples] [epochs] [batch_size] [test-images.idx3-ubyte] [test-labels.idx1-ubyte] [checkpoint_dir]
+./cnn_mnist_train <train-images.idx3-ubyte> <train-labels.idx1-ubyte> [max_samples] [epochs] [batch_size] [test-images.idx3-ubyte] [test-labels.idx1-ubyte] [checkpoint_dir] [model_config] [resume_artifact_dir]
 ```
 
 Example:
@@ -216,11 +246,42 @@ Example:
 ./cnn_mnist_train /home/ryyan/convnet/images/train-images.idx3-ubyte /home/ryyan/convnet/images/train-labels.idx1-ubyte 1000 3 32
 ```
 
+Real training example:
+
+```bash
+./cnn_mnist_train /home/ryyan/convnet/images/train-images.idx3-ubyte /home/ryyan/convnet/images/train-labels.idx1-ubyte 10000 10 32 /home/ryyan/convnet/images/t10k-images.idx3-ubyte /home/ryyan/convnet/images/t10k-labels.idx1-ubyte full_mnist_run_10k_10e
+```
+
 Behavior:
 
 - expects `28x28` grayscale IDX images
 - auto-detects `t10k-images.idx3-ubyte` and `t10k-labels.idx1-ubyte` in the same folder if test paths are omitted
+- builds the model from a config file
 - saves checkpoints under `best/`, `final/`, and per-improvement epoch folders
+- writes `training_state.txt` alongside saved artifacts
+- can resume from a saved artifact directory
+
+Important note:
+
+- tiny runs such as `64 samples, 1 epoch` are only lifecycle smoke tests
+- they are useful for validating `train -> save -> eval -> resume`
+- they are not representative model-quality runs
+
+### `cnn_eval`
+
+Dedicated evaluation executable for saved model artifacts.
+
+Usage:
+
+```bash
+./cnn_eval <model_artifact_manifest> <images.idx3-ubyte> <labels.idx1-ubyte> [max_samples] [batch_size]
+```
+
+Example:
+
+```bash
+./cnn_eval /home/ryyan/convnet/build/full_mnist_run_10k_10e/final/model.txt /home/ryyan/convnet/images/t10k-images.idx3-ubyte /home/ryyan/convnet/images/t10k-labels.idx1-ubyte 10000 32
+```
 
 ### `cnn_benchmark`
 
@@ -264,6 +325,41 @@ The benchmark now prints:
 - internal `Conv2D` timing breakdowns
 
 ## Data and Weight Formats
+
+### Architecture Configs
+
+Architecture configs are plain text files with header:
+
+```text
+cnn_cpp_config_v1
+```
+
+Included examples:
+
+- [configs/mnist_cnn.txt](/home/ryyan/convnet/cnn_cpp/configs/mnist_cnn.txt)
+- [configs/sample_infer_arch.txt](/home/ryyan/convnet/cnn_cpp/configs/sample_infer_arch.txt)
+
+These define architecture only, not learned weights.
+
+### Model Artifacts
+
+Saved model artifacts are plain text manifest directories with header:
+
+```text
+cnn_cpp_model_v1
+```
+
+An artifact directory contains:
+
+- `model.txt`
+- one weight file per trainable layer
+- one bias file per trainable layer
+- optionally `training_state.txt` when written by the trainer
+
+Config vs artifact:
+
+- config = architecture only
+- artifact = architecture + weights
 
 ### Plain-Text Image Input
 
@@ -312,6 +408,7 @@ Example files:
 - [weights/conv2_bias.txt](/home/ryyan/convnet/cnn_cpp/weights/conv2_bias.txt)
 - [weights/fc_weights.txt](/home/ryyan/convnet/cnn_cpp/weights/fc_weights.txt)
 - [weights/fc_bias.txt](/home/ryyan/convnet/cnn_cpp/weights/fc_bias.txt)
+- [weights/sample_infer_model.txt](/home/ryyan/convnet/cnn_cpp/weights/sample_infer_model.txt)
 
 Trained-demo checkpoint examples:
 
@@ -334,6 +431,10 @@ Current tests cover:
 - sequential execution
 - file I/O and IDX parsing
 - Stage 2 training flow
+- numerical gradient checking
+- model artifact roundtrip
+- model config construction
+- checkpoint state roundtrip
 
 Test files live under [tests](/home/ryyan/convnet/cnn_cpp/tests).
 
@@ -342,6 +443,8 @@ Run all tests:
 ```bash
 ctest --output-on-failure
 ```
+
+The current suite passes `14/14`.
 
 ## Performance Summary
 
@@ -358,6 +461,30 @@ The code has gone through several performance passes:
 - repeated-run benchmark with median / mean reporting
 
 This project is now well past the initial "proof of concept" phase. It is still a learning / engineering project, but it is no longer just a pile of random `.cpp` files.
+
+## End-To-End Workflow
+
+The project now supports a complete small-engine workflow:
+
+1. Build a model from config.
+2. Train it on IDX data with `cnn_mnist_train`.
+3. Save checkpoints as model artifacts.
+4. Evaluate artifacts with `cnn_eval`.
+5. Resume training from a saved artifact directory.
+
+Lifecycle smoke test:
+
+```bash
+./cnn_mnist_train /home/ryyan/convnet/images/train-images.idx3-ubyte /home/ryyan/convnet/images/train-labels.idx1-ubyte 64 1 32 /home/ryyan/convnet/images/t10k-images.idx3-ubyte /home/ryyan/convnet/images/t10k-labels.idx1-ubyte stage2_lifecycle_ckpt
+./cnn_eval /home/ryyan/convnet/build/stage2_lifecycle_ckpt/final/model.txt /home/ryyan/convnet/images/t10k-images.idx3-ubyte /home/ryyan/convnet/images/t10k-labels.idx1-ubyte 64 32
+./cnn_mnist_train /home/ryyan/convnet/images/train-images.idx3-ubyte /home/ryyan/convnet/images/train-labels.idx1-ubyte 64 1 32 /home/ryyan/convnet/images/t10k-images.idx3-ubyte /home/ryyan/convnet/images/t10k-labels.idx1-ubyte stage2_resume_ckpt /home/ryyan/convnet/cnn_cpp/configs/mnist_cnn.txt /home/ryyan/convnet/build/stage2_lifecycle_ckpt/final
+```
+
+Representative real training run:
+
+```bash
+./cnn_mnist_train /home/ryyan/convnet/images/train-images.idx3-ubyte /home/ryyan/convnet/images/train-labels.idx1-ubyte 10000 10 32 /home/ryyan/convnet/images/t10k-images.idx3-ubyte /home/ryyan/convnet/images/t10k-labels.idx1-ubyte full_mnist_run_10k_10e
+```
 
 ## Limitations
 
@@ -388,4 +515,4 @@ Natural next steps:
 
 ## License
 
-No license file is currently included. If this is going to GitHub, add one before publishing if you want other people to have clear reuse rights.
+This repository includes an MIT license at the repo root.

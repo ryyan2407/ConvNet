@@ -398,9 +398,23 @@ const std::vector<float>& Conv2D::weights() const { return weights_; }
 
 const std::vector<float>& Conv2D::bias() const { return bias_; }
 
+const std::vector<float>& Conv2D::grad_weights() const { return grad_weights_; }
+
+const std::vector<float>& Conv2D::grad_bias() const { return grad_bias_; }
+
 const Conv2D::ProfileStats& Conv2D::profile_stats() const { return profile_stats_; }
 
 void Conv2D::reset_profile_stats() { profile_stats_ = {}; }
+
+int Conv2D::in_channels() const { return in_channels_; }
+
+int Conv2D::out_channels() const { return out_channels_; }
+
+int Conv2D::kernel_size() const { return kernel_size_; }
+
+int Conv2D::stride() const { return stride_; }
+
+int Conv2D::padding() const { return padding_; }
 
 int Conv2D::expected_weight_count() const {
     return out_channels_ * in_channels_ * kernel_size_ * kernel_size_;

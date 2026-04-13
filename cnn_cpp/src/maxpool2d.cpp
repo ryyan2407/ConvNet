@@ -128,3 +128,7 @@ Tensor MaxPool2D::backward(const Tensor& grad_output) {
 
     return grad_input;
 }
+
+int MaxPool2D::kernel_size() const { return kernel_size_; }
+
+int MaxPool2D::stride() const { return stride_; }

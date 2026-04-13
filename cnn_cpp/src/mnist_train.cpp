@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <fstream>
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
@@ -10,64 +11,23 @@
 #include <utility>
 #include <vector>
 
+#include "checkpoint_io.hpp"
 #include "conv2d.hpp"
 #include "cross_entropy.hpp"
+#include "eval_utils.hpp"
 #include "flatten.hpp"
 #include "image_loader.hpp"
 #include "linear.hpp"
 #include "maxpool2d.hpp"
+#include "model_config.hpp"
+#include "model_io.hpp"
+#include "project_config.hpp"
 #include "relu.hpp"
 #include "sequential.hpp"
 #include "sgd.hpp"
 #include "softmax.hpp"
-#include "weights_loader.hpp"
 
 namespace {
-
-int argmax(const Tensor& output) {
-    int best_index = 0;
-    float best_value = output(0, 0, 0, 0);
-    for (int i = 1; i < output.W(); ++i) {
-        if (output(0, 0, 0, i) > best_value) {
-            best_value = output(0, 0, 0, i);
-            best_index = i;
-        }
-    }
-    return best_index;
-}
-
-int count_correct(const Tensor& logits, LabelView labels) {
-    const float* logits_data = logits.raw_data();
-    int correct = 0;
-    for (int n = 0; n < logits.N(); ++n) {
-        const int base = logits.offset_unchecked(n, 0, 0, 0);
-        int best_index = 0;
-        float best_value = logits_data[base];
-        for (int i = 1; i < logits.W(); ++i) {
-            if (logits_data[base + i] > best_value) {
-                best_value = logits_data[base + i];
-                best_index = i;
-            }
-        }
-        if (best_index == labels[n]) {
-            ++correct;
-        }
-    }
-    return correct;
-}
-
-void save_model_checkpoint(const std::filesystem::path& weights_dir,
-                           const Conv2D& conv1,
-                           const Conv2D& conv2,
-                           const Linear& linear) {
-    std::filesystem::create_directories(weights_dir);
-    save_weights_to_file((weights_dir / "conv1_weights.txt").string(), conv1.weights());
-    save_weights_to_file((weights_dir / "conv1_bias.txt").string(), conv1.bias());
-    save_weights_to_file((weights_dir / "conv2_weights.txt").string(), conv2.weights());
-    save_weights_to_file((weights_dir / "conv2_bias.txt").string(), conv2.bias());
-    save_weights_to_file((weights_dir / "fc_weights.txt").string(), linear.weights());
-    save_weights_to_file((weights_dir / "fc_bias.txt").string(), linear.bias());
-}
 
 std::string format_metric(float value) {
     std::ostringstream stream;
@@ -75,67 +35,16 @@ std::string format_metric(float value) {
     return stream.str();
 }
 
-LabelView make_range_labels(const std::vector<int>& labels, std::size_t start, std::size_t end) {
-    return LabelView{labels.data() + static_cast<std::ptrdiff_t>(start), static_cast<int>(end - start)};
-}
-
-std::pair<float, float> evaluate_dataset(Sequential& model,
-                                         const LabeledDataset& dataset,
-                                         CrossEntropyLoss& loss,
-                                         int batch_size) {
-    float total_loss = 0.0f;
-    int correct = 0;
-    std::size_t total_seen = 0;
-#if defined(CNN_CPP_USE_OPENMP)
-#pragma omp parallel
-#endif
-    {
-        CrossEntropyLoss local_loss = loss;
-        float thread_loss = 0.0f;
-        int thread_correct = 0;
-        std::size_t thread_seen = 0;
-
-#if defined(CNN_CPP_USE_OPENMP)
-#pragma omp for schedule(static)
-#endif
-        for (std::int64_t start = 0; start < static_cast<std::int64_t>(dataset.data.N());
-             start += static_cast<std::int64_t>(batch_size)) {
-            const std::size_t batch_start = static_cast<std::size_t>(start);
-            const std::size_t end = std::min(batch_start + static_cast<std::size_t>(batch_size),
-                                             static_cast<std::size_t>(dataset.data.N()));
-            Tensor batch = dataset.data.slice_n(static_cast<int>(batch_start), static_cast<int>(end - batch_start));
-            LabelView labels = make_range_labels(dataset.labels, batch_start, end);
-            Tensor logits = model.predict(batch);
-            thread_loss += local_loss.forward(logits, labels) * static_cast<float>(labels.size);
-            thread_correct += count_correct(logits, labels);
-            thread_seen += static_cast<std::size_t>(labels.size);
-        }
-
-#if defined(CNN_CPP_USE_OPENMP)
-#pragma omp critical
-#endif
-        {
-            total_loss += thread_loss;
-            correct += thread_correct;
-            total_seen += thread_seen;
-        }
-    }
-
-    return {
-        total_loss / static_cast<float>(total_seen),
-        static_cast<float>(correct) / static_cast<float>(total_seen)
-    };
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
     try {
         if (argc < 3) {
-            std::cerr << "Usage: ./cnn_mnist_train <train-images.idx3-ubyte> <train-labels.idx1-ubyte> [max_samples] [epochs] [batch_size] [test-images.idx3-ubyte] [test-labels.idx1-ubyte] [checkpoint_dir]\n";
+            std::cerr << "Usage: ./cnn_mnist_train <train-images.idx3-ubyte> <train-labels.idx1-ubyte> [max_samples] [epochs] [batch_size] [test-images.idx3-ubyte] [test-labels.idx1-ubyte] [checkpoint_dir] [model_config] [resume_artifact_dir]\n";
             return 1;
         }
 
+        const std::filesystem::path project_root = CNN_CPP_PROJECT_ROOT;
         const std::string images_path = argv[1];
         const std::string labels_path = argv[2];
         const int max_samples = argc >= 4 ? std::stoi(argv[3]) : 1000;
@@ -174,6 +83,14 @@ int main(int argc, char** argv) {
         if (argc >= 9) {
             checkpoint_root = argv[8];
         }
+        std::filesystem::path model_config_path = project_root / "configs" / "mnist_cnn.txt";
+        if (argc >= 10) {
+            model_config_path = argv[9];
+        }
+        std::filesystem::path resume_artifact_dir;
+        if (argc >= 11) {
+            resume_artifact_dir = argv[10];
+        }
 
         LabeledDataset test_dataset;
         const bool has_test_set = !test_images_path.empty() && !test_labels_path.empty();
@@ -185,22 +102,22 @@ int main(int argc, char** argv) {
             throw std::runtime_error("cnn_mnist_train expects 28x28 IDX images");
         }
 
-        auto conv1 = std::make_unique<Conv2D>(1, 8, 3, 1, 1);
-        auto* conv1_ptr = conv1.get();
-        auto conv2 = std::make_unique<Conv2D>(8, 16, 3, 1, 1);
-        auto* conv2_ptr = conv2.get();
-        auto linear = std::make_unique<Linear>(16 * 7 * 7, 10);
-        auto* linear_ptr = linear.get();
-
         Sequential model;
-        model.add(std::move(conv1));
-        model.add(std::make_unique<ReLU>());
-        model.add(std::make_unique<MaxPool2D>(2, 2));
-        model.add(std::move(conv2));
-        model.add(std::make_unique<ReLU>());
-        model.add(std::make_unique<MaxPool2D>(2, 2));
-        model.add(std::make_unique<Flatten>());
-        model.add(std::move(linear));
+        TrainingState state;
+        if (!resume_artifact_dir.empty()) {
+            model = load_model_artifact((resume_artifact_dir / "model.txt").string());
+            const std::filesystem::path state_path = resume_artifact_dir / "training_state.txt";
+            if (std::filesystem::exists(state_path)) {
+                state = load_training_state(state_path.string());
+                if (!state.model_config_path.empty()) {
+                    model_config_path = state.model_config_path;
+                }
+            }
+            std::cout << "Resuming from: " << resume_artifact_dir << "\n";
+            std::cout << "Starting after epoch " << state.epoch_completed << "\n";
+        } else {
+            model = build_model_from_config(model_config_path.string());
+        }
 
         CrossEntropyLoss loss;
         SGD optimizer(0.01f);
@@ -212,9 +129,11 @@ int main(int argc, char** argv) {
             batch_order.at(i) = i;
         }
 
-        float best_metric = -1.0f;
+        float best_metric = state.best_metric;
+        const int start_epoch = state.epoch_completed;
 
-        for (int epoch = 0; epoch < epochs; ++epoch) {
+        for (int epoch_offset = 0; epoch_offset < epochs; ++epoch_offset) {
+            const int epoch = start_epoch + epoch_offset;
             std::shuffle(batch_order.begin(), batch_order.end(), generator);
             float epoch_loss = 0.0f;
             int correct = 0;
@@ -251,16 +170,22 @@ int main(int argc, char** argv) {
             if (checkpoint_metric > best_metric) {
                 best_metric = checkpoint_metric;
                 const std::filesystem::path best_dir = checkpoint_root / "best";
-                save_model_checkpoint(best_dir, *conv1_ptr, *conv2_ptr, *linear_ptr);
+                save_model_artifact(model, best_dir.string());
+                save_training_state((best_dir / "training_state.txt").string(),
+                                    TrainingState{epoch + 1, best_metric, model_config_path.string()});
 
                 const std::filesystem::path epoch_dir =
                     checkpoint_root / ("epoch_" + std::to_string(epoch + 1) + "_metric_" + format_metric(checkpoint_metric));
-                save_model_checkpoint(epoch_dir, *conv1_ptr, *conv2_ptr, *linear_ptr);
+                save_model_artifact(model, epoch_dir.string());
+                save_training_state((epoch_dir / "training_state.txt").string(),
+                                    TrainingState{epoch + 1, best_metric, model_config_path.string()});
             }
         }
 
         const std::filesystem::path weights_dir = checkpoint_root / "final";
-        save_model_checkpoint(weights_dir, *conv1_ptr, *conv2_ptr, *linear_ptr);
+        save_model_artifact(model, weights_dir.string());
+        save_training_state((weights_dir / "training_state.txt").string(),
+                            TrainingState{start_epoch + epochs, best_metric, model_config_path.string()});
 
         Softmax softmax;
         Tensor first_train_sample = dataset.data.slice_n(0, 1);

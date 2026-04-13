@@ -13,6 +13,7 @@ public:
     Tensor backward(const Tensor& grad_output);
     void zero_grad();
     void update(float learning_rate);
+    const std::vector<std::unique_ptr<Layer>>& layers() const;
 
 private:
     std::vector<std::unique_ptr<Layer>> layers_;

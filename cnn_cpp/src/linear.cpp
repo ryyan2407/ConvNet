@@ -138,6 +138,14 @@ const std::vector<float>& Linear::weights() const { return weights_; }
 
 const std::vector<float>& Linear::bias() const { return bias_; }
 
+const std::vector<float>& Linear::grad_weights() const { return grad_weights_; }
+
+const std::vector<float>& Linear::grad_bias() const { return grad_bias_; }
+
+int Linear::in_features() const { return in_features_; }
+
+int Linear::out_features() const { return out_features_; }
+
 int Linear::expected_weight_count() const { return out_features_ * in_features_; }
 int Linear::expected_bias_count() const { return out_features_; }
 
