@@ -1,4 +1,4 @@
-# ConvNet
+# ConvNet++
 
 From-scratch convolutional neural network engine in C++.
 
