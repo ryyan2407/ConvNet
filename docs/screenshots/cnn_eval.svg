@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1730" height="218" viewBox="0 0 1730 218">
+  <rect width="1730" height="218" rx="16" fill="#0b1020"/>
+  <rect x="0" y="0" width="1730" height="42" rx="16" fill="#151b2f"/>
+  <rect x="0" y="42" width="1730" height="176" fill="#0b1020"/>
+  <circle cx="22" cy="21" r="6" fill="#ff5f56"/>
+  <circle cx="42" cy="21" r="6" fill="#ffbd2e"/>
+  <circle cx="62" cy="21" r="6" fill="#27c93f"/>
+  <text x="84" y="26"
+        font-family="Inter, Segoe UI, Arial, sans-serif"
+        font-size="15" fill="#c9d1d9">Evaluation</text>
+  <text x="28" y="70" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#8be9fd">$ ./cnn_eval /home/ryyan/convnet/build/full_mnist_run_10k_10e/final/model.txt /home/ryyan/convnet/images/t10k-images.idx3-ubyte /home/ryyan/convnet/images/t10k-labels.idx1-ubyte 10000 32</text><text x="28" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Evaluated model: /home/ryyan/convnet/build/full_mnist_run_10k_10e/final/model.txt</text><text x="28" y="118" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Samples: 10000</text><text x="28" y="142" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Loss: 0.181209</text><text x="28" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Accuracy: 0.9464</text>
+</svg>

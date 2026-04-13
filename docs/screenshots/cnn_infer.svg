@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="704" height="314" viewBox="0 0 704 314">
+  <rect width="704" height="314" rx="16" fill="#0b1020"/>
+  <rect x="0" y="0" width="704" height="42" rx="16" fill="#151b2f"/>
+  <rect x="0" y="42" width="704" height="272" fill="#0b1020"/>
+  <circle cx="22" cy="21" r="6" fill="#ff5f56"/>
+  <circle cx="42" cy="21" r="6" fill="#ffbd2e"/>
+  <circle cx="62" cy="21" r="6" fill="#27c93f"/>
+  <text x="84" y="26"
+        font-family="Inter, Segoe UI, Arial, sans-serif"
+        font-size="15" fill="#c9d1d9">Inference</text>
+  <text x="28" y="70" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#8be9fd">$ ./cnn_infer /home/ryyan/convnet/cnn_cpp/weights/sample_infer_model.txt</text><text x="28" y="94" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Input shape: [1, 1, 8, 8]</text><text x="28" y="118" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Model file: &quot;/home/ryyan/convnet/cnn_cpp/weights/sample_infer_model.txt&quot;</text><text x="28" y="142" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Output shape: [1, 1, 1, 3]</text><text x="28" y="166" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Probabilities:</text><text x="28" y="190" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">class 0: 0.360481</text><text x="28" y="214" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">class 1: 0.307937</text><text x="28" y="238" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">class 2: 0.331582</text><text x="28" y="262" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace" font-size="16" fill="#f8f8f2">Predicted class: 0</text>
+</svg>
